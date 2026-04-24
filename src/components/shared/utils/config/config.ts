@@ -40,7 +40,6 @@ export const isTestLink = () => {
     return (
         window.location.origin?.includes('.binary.sx') ||
         window.location.origin?.includes('bot-65f.pages.dev') ||
-        isNetlify() ||
         isLocal()
     );
 };
@@ -71,6 +70,10 @@ const getDefaultServerURL = () => {
 export const getDefaultAppIdAndUrl = () => {
     const server_url = getDefaultServerURL();
 
+    if (isNetlify()) {
+        return { app_id: APP_IDS.PRODUCTION, server_url };
+    }
+
     if (isTestLink()) {
         return { app_id: APP_IDS.LOCALHOST, server_url };
     }
@@ -90,6 +93,9 @@ export const getAppId = () => {
         app_id = config_app_id;
     } else if (isStaging()) {
         app_id = APP_IDS.STAGING;
+    } else if (isNetlify()) {
+        // Netlify deployments use the official Deriv production app ID
+        app_id = APP_IDS.PRODUCTION;
     } else if (isTestLink()) {
         app_id = APP_IDS.LOCALHOST;
     } else {
