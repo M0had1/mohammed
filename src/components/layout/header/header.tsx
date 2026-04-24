@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import clsx from 'clsx';
 import { observer } from 'mobx-react-lite';
 import PWAInstallButton from '@/components/pwa-install-button';
@@ -17,6 +17,7 @@ import { Localize, useTranslations } from '@deriv-com/translations';
 import { Header, useDevice, Wrapper } from '@deriv-com/ui';
 import { Tooltip } from '@deriv-com/ui';
 import { AppLogo } from '../app-logo';
+import ApiTokenLoginModal from './api-token-login/api-token-login-modal';
 import AccountsInfoLoader from './account-info-loader';
 import AccountSwitcher from './account-switcher';
 import MenuItems from './menu-items';
@@ -29,6 +30,7 @@ type TAppHeaderProps = {
 };
 
 const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
+    const [isApiTokenModalOpen, setIsApiTokenModalOpen] = useState(false);
     const { isDesktop } = useDevice();
     const { isAuthorizing, activeLoginid } = useApiBase();
     const { client } = useStore() ?? {};
@@ -137,6 +139,13 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
                 <div className='auth-actions'>
                     <Button
                         tertiary
+                        onClick={() => setIsApiTokenModalOpen(true)}
+                        className='api-token-btn'
+                    >
+                        <Localize i18n_default_text='API Token' />
+                    </Button>
+                    <Button
+                        tertiary
                         onClick={async () => {
                             clearAuthData(false);
                             const getQueryParams = new URLSearchParams(window.location.search);
@@ -206,6 +215,7 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
 
     if (client?.should_hide_header) return null;
     return (
+        <>
         <Header
             className={clsx('app-header', {
                 'app-header--desktop': isDesktop,
@@ -225,6 +235,11 @@ const AppHeader = observer(({ isAuthenticating }: TAppHeaderProps) => {
             </Wrapper>
             {/* <PWAInstallModalTest /> */}
         </Header>
+            <ApiTokenLoginModal
+                isOpen={isApiTokenModalOpen}
+                onClose={() => setIsApiTokenModalOpen(false)}
+            />
+        </>
     );
 });
 
