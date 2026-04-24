@@ -272,7 +272,7 @@ const CandleBotPanel: React.FC = observer(() => {
 
                     </div>{/* end scrollable body */}
                 </div>
-            );}
+            )}
         </div>
     );
 });
