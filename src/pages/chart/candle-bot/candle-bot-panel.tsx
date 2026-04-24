@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { useStore } from '@/hooks/useStore';
 import { CandleBotSettings, CandleBotStatus } from './candle-bot.types';
@@ -35,6 +35,41 @@ const CandleBotPanel: React.FC = observer(() => {
     });
     const [isOpen, setIsOpen] = useState(false);
 
+    // ── drag state ────────────────────────────────────────────────────────────
+    const panelRef = useRef<HTMLDivElement>(null);
+    const [dragged, setDragged] = useState(false);
+    const [pos, setPos] = useState({ x: 0, y: 0 });
+    const dragOrigin = useRef({ mouseX: 0, mouseY: 0, panelX: 0, panelY: 0 });
+
+    const onDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+        e.preventDefault();
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+        dragOrigin.current = { mouseX: clientX, mouseY: clientY, panelX: pos.x, panelY: pos.y };
+
+        const onMove = (ev: MouseEvent | TouchEvent) => {
+            const mx = 'touches' in ev ? (ev as TouchEvent).touches[0].clientX : (ev as MouseEvent).clientX;
+            const my = 'touches' in ev ? (ev as TouchEvent).touches[0].clientY : (ev as MouseEvent).clientY;
+            setDragged(true);
+            setPos({
+                x: dragOrigin.current.panelX + mx - dragOrigin.current.mouseX,
+                y: dragOrigin.current.panelY + my - dragOrigin.current.mouseY,
+            });
+        };
+
+        const onUp = () => {
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            window.removeEventListener('touchmove', onMove);
+            window.removeEventListener('touchend', onUp);
+        };
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onUp);
+    }, [pos]);
+
     const { status, statusMsg, totalPnl, trades, currentStake, martingaleStep, startBot, stopBot } = useCandleBot();
 
     // Keep symbol in sync with the chart's selected symbol
@@ -58,8 +93,16 @@ const CandleBotPanel: React.FC = observer(() => {
         setSettings(prev => ({ ...prev, [field]: value }));
     };
 
+    const panelStyle: React.CSSProperties = dragged
+        ? { transform: `translate(${pos.x}px, ${pos.y}px)` }
+        : {};
+
     return (
-        <div className={`cbot-panel ${isOpen ? 'cbot-panel--open' : ''}`}>
+        <div
+            ref={panelRef}
+            className={`cbot-panel ${isOpen ? 'cbot-panel--open' : ''}`}
+            style={panelStyle}
+        >
             {/* Floating toggle button */}
             <button
                 className={`cbot-toggle ${isActive ? 'cbot-toggle--active' : ''}`}
@@ -73,10 +116,19 @@ const CandleBotPanel: React.FC = observer(() => {
 
             {isOpen && (
                 <div className='cbot-drawer'>
-                    <div className='cbot-drawer__header'>
+                    {/* Drag handle */}
+                    <div
+                        className='cbot-drawer__header cbot-drawer__header--draggable'
+                        onMouseDown={onDragStart}
+                        onTouchStart={onDragStart}
+                    >
+                        <span className='cbot-drawer__drag-hint'>⠿</span>
                         <span className='cbot-drawer__title'>🕯️ Candle Bot</span>
                         <button className='cbot-drawer__close' onClick={() => setIsOpen(false)}>✕</button>
                     </div>
+
+                    {/* Scrollable body */}
+                    <div className='cbot-drawer__body'>
 
                     {/* Status bar */}
                     <div className={`cbot-status cbot-status--${status}`}>
@@ -217,8 +269,10 @@ const CandleBotPanel: React.FC = observer(() => {
                     <p className='cbot-disclaimer'>
                         ⚠️ Automated trading carries risk. Only trade with money you can afford to lose.
                     </p>
+
+                    </div>{/* end scrollable body */}
                 </div>
-            )}
+            );}
         </div>
     );
 });
