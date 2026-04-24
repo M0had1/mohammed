@@ -26,8 +26,8 @@ const DEFAULT_SETTINGS: CandleBotSettings = {
 };
 
 const CandleBotPanel: React.FC = observer(() => {
-    const { chart_store } = useStore();
-    const { symbol } = chart_store;
+    const store = useStore();
+    const symbol = store?.chart_store?.symbol ?? undefined;
 
     const [settings, setSettings] = useState<CandleBotSettings>({
         ...DEFAULT_SETTINGS,

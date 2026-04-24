@@ -33,9 +33,37 @@ const subscriptions: TSubscription = {};
 
 const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) => {
     const barriers: [] = [];
-    const { common, ui } = useStore();
-    const { chart_store, run_panel, dashboard } = useStore();
+    const store = useStore();
     const [isSafari, setIsSafari] = useState(false);
+
+    // Pull from store safely — store initialises async so may be null initially
+    const chart_store = store?.chart_store;
+    const chart_subscription_id = chart_store?.chart_subscription_id ?? '';
+    const chartSubscriptionIdRef = useRef(chart_subscription_id);
+    const { isDesktop, isMobile } = useDevice();
+
+    // All hooks must run unconditionally before any early return
+    useEffect(() => {
+        const isSafariBrowser = () => {
+            const ua = navigator.userAgent.toLowerCase();
+            return ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1 && ua.indexOf('android') === -1;
+        };
+        setIsSafari(isSafariBrowser());
+        return () => {
+            chart_api.api?.forgetAll?.('ticks');
+        };
+    }, []);
+
+    useEffect(() => {
+        chartSubscriptionIdRef.current = chart_subscription_id;
+    }, [chart_subscription_id]);
+
+    useEffect(() => {
+        if (chart_store && !chart_store.symbol) chart_store.updateSymbol();
+    }, [chart_store?.symbol, chart_store]);
+
+    // Guard: bail out until store is ready
+    if (!store || !chart_store || !store.run_panel || !store.dashboard || !store.common || !store.ui) return null;
 
     const {
         chart_type,
@@ -48,43 +76,17 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
         updateGranularity,
         updateSymbol,
         setChartSubscriptionId,
-        chart_subscription_id,
     } = chart_store;
-    const chartSubscriptionIdRef = useRef(chart_subscription_id);
-    const { isDesktop, isMobile } = useDevice();
-    const { is_drawer_open } = run_panel;
-    const { is_chart_modal_visible } = dashboard;
+    const { is_drawer_open } = store.run_panel;
+    const { is_chart_modal_visible } = store.dashboard;
     const settings = {
-        assetInformation: false, // ui.is_chart_asset_info_visible,
+        assetInformation: false,
         countdown: true,
-        isHighestLowestMarkerEnabled: false, // TODO: Pending UI,
-        language: common.current_language.toLowerCase(),
-        position: ui.is_chart_layout_default ? 'bottom' : 'left',
-        theme: ui.is_dark_mode_on ? 'dark' : 'light',
+        isHighestLowestMarkerEnabled: false,
+        language: store.common.current_language?.toLowerCase() ?? 'en',
+        position: store.ui.is_chart_layout_default ? 'bottom' : 'left',
+        theme: store.ui.is_dark_mode_on ? 'dark' : 'light',
     };
-    // (chart store values used below in SmartChart)
-
-    useEffect(() => {
-        // Safari browser detection
-        const isSafariBrowser = () => {
-            const ua = navigator.userAgent.toLowerCase();
-            return ua.indexOf('safari') !== -1 && ua.indexOf('chrome') === -1 && ua.indexOf('android') === -1;
-        };
-
-        setIsSafari(isSafariBrowser());
-
-        return () => {
-            chart_api.api.forgetAll('ticks');
-        };
-    }, []);
-
-    useEffect(() => {
-        chartSubscriptionIdRef.current = chart_subscription_id;
-    }, [chart_subscription_id]);
-
-    useEffect(() => {
-        if (!symbol) updateSymbol();
-    }, [symbol, updateSymbol]);
 
     const requestAPI = (req: ServerTimeRequest | ActiveSymbolsRequest | TradingTimesRequest) => {
         return chart_api.api.send(req);
