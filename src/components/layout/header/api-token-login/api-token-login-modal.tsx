@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import Cookies from 'js-cookie';
 import { generateDerivApiInstance } from '@/external/bot-skeleton/services/api/appId';
 import { Localize } from '@deriv-com/translations';
 import './api-token-login-modal.scss';
@@ -57,17 +58,24 @@ const ApiTokenLoginModal: React.FC<Props> = ({ isOpen, onClose }) => {
                 return;
             }
 
-            // Persist auth info exactly the same way AuthWrapper does
+            // Persist auth info matching exactly what AuthWrapper + CoreStoreProvider expect
             const loginid = authorize.loginid;
+
+            // accountsList: { loginid -> token }  (used by useOauth2 & api_base)
             const accountsList: Record<string, string> = {};
+            // clientAccounts: { loginid -> { loginid, token, currency } }  (used by auth-utils clearAuthData)
             const clientAccounts: Record<string, { loginid: string; token: string; currency: string }> = {};
 
             (authorize.account_list || []).forEach((acc: any) => {
-                accountsList[acc.loginid] = trimmed; // we only have the one token
-                clientAccounts[acc.loginid] = { loginid: acc.loginid, token: trimmed, currency: acc.currency };
+                accountsList[acc.loginid] = trimmed;
+                clientAccounts[acc.loginid] = {
+                    loginid: acc.loginid,
+                    token: trimmed,
+                    currency: acc.currency || authorize.currency,
+                };
             });
 
-            // Ensure the current account is in the map
+            // Always ensure the authorised account itself is present
             accountsList[loginid] = trimmed;
             clientAccounts[loginid] = {
                 loginid,
@@ -82,6 +90,19 @@ const ApiTokenLoginModal: React.FC<Props> = ({ isOpen, onClose }) => {
             if (authorize.country) {
                 localStorage.setItem('client.country', authorize.country);
             }
+
+            // Set logged_state cookie — CoreStoreProvider calls oAuthLogout() when this is 'false'
+            // We must set it to 'true' so the app knows the user is intentionally logged in
+            const cookieDomain = window.location.hostname.split('.').slice(-2).join('.');
+            Cookies.set('logged_state', 'true', {
+                domain: cookieDomain,
+                expires: 30,
+                secure: window.location.protocol === 'https:',
+                sameSite: 'Lax',
+            });
+
+            // Remove any stale OIDC logout cookies that might interfere
+            Cookies.remove('is_logging_out');
 
             onClose();
             // Reload so the app picks up the new auth state
