@@ -20,8 +20,13 @@ const FreeBots = lazy(() => import('../pages/free-bots'));
 const AnalysisTool = lazy(() => import('../pages/analysis-tool'));
 
 const { TRANSLATIONS_CDN_URL, R2_PROJECT_NAME, CROWDIN_BRANCH_NAME } = process.env;
+// Fall back to an empty string when translation CDN vars are not configured (e.g. Netlify without secrets)
+const translationsCdnUrl =
+    TRANSLATIONS_CDN_URL && R2_PROJECT_NAME && CROWDIN_BRANCH_NAME
+        ? `${TRANSLATIONS_CDN_URL}/${R2_PROJECT_NAME}/${CROWDIN_BRANCH_NAME}`
+        : '';
 const i18nInstance = initializeI18n({
-    cdnUrl: `${TRANSLATIONS_CDN_URL}/${R2_PROJECT_NAME}/${CROWDIN_BRANCH_NAME}`,
+    cdnUrl: translationsCdnUrl,
 });
 
 // Simple Suspense wrapper without timeout that causes dark landing page

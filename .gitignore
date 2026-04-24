@@ -18,8 +18,13 @@ key.pem
 cert.pem
 
 .env
-.env.*
+.env.local
+.env.development
+.env.staging
+.env.production
 *.env
+# allow the example file
+!.env.example
 
 *.secret
 nx-cloud.env
