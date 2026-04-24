@@ -126,17 +126,26 @@ export default class ChartStore {
     getMarketsOrder = (active_symbols: { market: string; display_name: string }[]) => {
         const synthetic_index = 'synthetic_index';
 
-        const has_synthetic_index = !!active_symbols.find(s => s.market === synthetic_index);
-        return active_symbols
+        // Guard: filter out any symbols missing required fields to prevent toString() crash
+        const valid_symbols = (active_symbols || []).filter(
+            s => s && typeof s.market === 'string' && typeof s.display_name === 'string'
+        );
+
+        const has_synthetic_index = !!valid_symbols.find(s => s.market === synthetic_index);
+        return valid_symbols
             .slice()
-            .sort((a, b) => (a.display_name < b.display_name ? -1 : 1))
+            .sort((a, b) => {
+                const nameA = a.display_name ?? '';
+                const nameB = b.display_name ?? '';
+                return nameA < nameB ? -1 : nameA > nameB ? 1 : 0;
+            })
             .map(s => s.market)
             .reduce(
                 (arr, market) => {
-                    if (arr.indexOf(market) === -1) arr.push(market);
+                    if (market && arr.indexOf(market) === -1) arr.push(market);
                     return arr;
                 },
-                has_synthetic_index ? [synthetic_index] : []
+                has_synthetic_index ? [synthetic_index] : [] as string[]
             );
     };
     setChartSubscriptionId = (chartSubscriptionId: string) => {
