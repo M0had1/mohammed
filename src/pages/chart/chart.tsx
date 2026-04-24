@@ -12,6 +12,7 @@ import {
 } from '@deriv/api-types';
 import { ChartTitle, SmartChart } from '@deriv/deriv-charts';
 import { useDevice } from '@deriv-com/ui';
+import CandleBotPanel from './candle-bot/candle-bot-panel';
 import ToolbarWidgets from './toolbar-widgets';
 import '@deriv/deriv-charts/dist/smartcharts.css';
 
@@ -61,19 +62,7 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
         position: ui.is_chart_layout_default ? 'bottom' : 'left',
         theme: ui.is_dark_mode_on ? 'dark' : 'light',
     };
-    console.log({
-        chart_type,
-        getMarketsOrder,
-        granularity,
-        onSymbolChange,
-        setChartStatus,
-        symbol,
-        updateChartType,
-        updateGranularity,
-        updateSymbol,
-        setChartSubscriptionId,
-        chart_subscription_id,
-    });
+    // (chart store values used below in SmartChart)
 
     useEffect(() => {
         // Safari browser detection
@@ -128,6 +117,7 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
     const is_connection_opened = !!chart_api?.api;
     return (
         <div
+            style={{ position: 'relative' }}
             className={classNames('dashboard__chart-wrapper', {
                 'dashboard__chart-wrapper--expanded': is_drawer_open && isDesktop,
                 'dashboard__chart-wrapper--modal': is_chart_modal_visible && isDesktop,
@@ -166,6 +156,7 @@ const Chart = observer(({ show_digits_stats }: { show_digits_stats: boolean }) =
                 isLive
                 leftMargin={80}
             />
+            <CandleBotPanel />
         </div>
     );
 });
